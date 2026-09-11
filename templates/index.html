@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Summarizer</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family:
+                Inter,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            min-height: 100vh;
+            color: #172033;
+            overflow-x: hidden;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #fff5ee 0%,
+                    #fff0ed 35%,
+                    #f8efff 70%,
+                    #fff6ee 100%
+                );
+        }
+
+        .background {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(55px);
+            opacity: 0.35;
+        }
+
+        .blob.one {
+            width: 300px;
+            height: 300px;
+            background: #ffb078;
+            top: -120px;
+            left: -80px;
+            animation: blobOne 12s ease-in-out infinite;
+        }
+
+        .blob.two {
+            width: 330px;
+            height: 330px;
+            background: #e5a6ff;
+            right: -120px;
+            top: 20%;
+            animation: blobTwo 15s ease-in-out infinite;
+        }
+
+        .blob.three {
+            width: 300px;
+            height: 300px;
+            background: #ff9eaf;
+            left: 30%;
+            bottom: -160px;
+            animation: blobThree 14s ease-in-out infinite;
+        }
+
+        @keyframes blobOne {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            50% {
+                transform: translate(120px, 100px) scale(1.2);
+            }
+        }
+
+        @keyframes blobTwo {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            50% {
+                transform: translate(-120px, 100px) scale(1.15);
+            }
+        }
+
+        @keyframes blobThree {
+            0%, 100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(100px, -80px);
+            }
+        }
+
+        .dot {
+            position: absolute;
+            border-radius: 50%;
+            animation: floatingDot linear infinite;
+        }
+
+        .dot:nth-child(4) {
+            width: 12px;
+            height: 12px;
+            background: #ffb36d;
+            left: 8%;
+            top: 25%;
+            animation-duration: 9s;
+        }
+
+        .dot:nth-child(5) {
+            width: 8px;
+            height: 8px;
+            background: #ff8fa8;
+            left: 18%;
+            top: 75%;
+            animation-duration: 12s;
+        }
+
+        .dot:nth-child(6) {
+            width: 10px;
+            height: 10px;
+            background: #c99aff;
+            left: 78%;
+            top: 18%;
+            animation-duration: 10s;
+        }
+
+        .dot:nth-child(7) {
+            width: 7px;
+            height: 7px;
+            background: #ffb36d;
+            right: 8%;
+            top: 62%;
+            animation-duration: 11s;
+        }
+
+        .dot:nth-child(8) {
+            width: 13px;
+            height: 13px;
+            background: #ff9eb4;
+            left: 48%;
+            top: 8%;
+            animation-duration: 13s;
+        }
+
+        @keyframes floatingDot {
+            0%, 100% {
+                transform: translateY(0) translateX(0);
+                opacity: 0.35;
+            }
+
+            50% {
+                transform: translateY(-35px) translateX(20px);
+                opacity: 0.75;
+            }
+        }
+
+        .sparkle {
+            position: absolute;
+            color: white;
+            font-size: 22px;
+            opacity: 0.7;
+            animation: sparkleAnimation 3s ease-in-out infinite;
+        }
+
+        .sparkle:nth-child(9) {
+            left: 7%;
+            top: 12%;
+        }
+
+        .sparkle:nth-child(10) {
+            right: 14%;
+            top: 12%;
+            animation-delay: 1s;
+        }
+
+        .sparkle:nth-child(11) {
+            left: 82%;
+            top: 78%;
+            animation-delay: 1.7s;
+        }
+
+        .sparkle:nth-child(12) {
+            left: 28%;
+            bottom: 10%;
+            animation-delay: 0.8s;
+        }
+
+        @keyframes sparkleAnimation {
+            0%, 100% {
+                transform: scale(0.7);
+                opacity: 0.25;
+            }
+
+            50% {
+                transform: scale(1.25);
+                opacity: 0.9;
+            }
+        }
+
+        .app {
+            width: min(1150px, 92%);
+            margin: 40px auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .top-left {
+            position: fixed;
+            left: 45px;
+            top: 42px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #35405d;
+            font-size: 14px;
+            line-height: 1.35;
+            z-index: 3;
+        }
+
+        .book-icon {
+            font-size: 32px;
+        }
+
+        .top-right {
+            position: fixed;
+            right: 45px;
+            top: 35px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 22px;
+            border-radius: 50px;
+            background: rgba(255,255,255,0.55);
+            border: 1px solid rgba(255,255,255,0.8);
+            box-shadow:
+                0 8px 25px rgba(80,40,100,0.08);
+            backdrop-filter: blur(15px);
+            color: #303b5d;
+            font-size: 14px;
+            line-height: 1.3;
+            z-index: 3;
+        }
+
+        .top-star {
+            font-size: 28px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ff5f6d,
+                    #8c4cff,
+                    #00aaff
+                );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: starPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes starPulse {
+            0%, 100% {
+                transform: scale(1) rotate(0deg);
+            }
+
+            50% {
+                transform: scale(1.15) rotate(8deg);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin: 80px 0 38px;
+        }
+
+        h1 {
+            font-size: clamp(45px, 6vw, 72px);
+            font-weight: 800;
+            letter-spacing: -3px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #f47721,
+                    #ff426d,
+                    #d6329f
+                );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: titleMove 5s ease-in-out infinite;
+        }
+
+        @keyframes titleMove {
+            0%, 100% {
+                background-position: 0% center;
+            }
+
+            50% {
+                background-position: 100% center;
+            }
+        }
+
+        .subtitle {
+            margin-top: 14px;
+            font-size: 18px;
+            color: #52607d;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+        }
+
+        .card {
+            background:
+                rgba(255,255,255,0.75);
+
+            border:
+                1px solid rgba(255,255,255,0.95);
+
+            border-radius: 22px;
+            padding: 25px;
+
+            box-shadow:
+                0 18px 55px rgba(65,40,70,0.09);
+
+            backdrop-filter: blur(20px);
+
+            transition:
+                transform 0.3s ease,
+                box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+
+            box-shadow:
+                0 25px 65px rgba(65,40,70,0.13);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 21px;
+            font-weight: 750;
+        }
+
+        .icon {
+            width: 48px;
+            height: 48px;
+            display: grid;
+            place-items: center;
+            border-radius: 13px;
+            color: white;
+            font-size: 23px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ff9a3d,
+                    #ff4f69
+                );
+
+            box-shadow:
+                0 8px 20px rgba(255,90,70,0.2);
+        }
+
+        .example-btn {
+            border: none;
+            padding: 10px 17px;
+            border-radius: 30px;
+            background: white;
+            color: #38425d;
+            font-size: 14px;
+            cursor: pointer;
+
+            border:
+                1px solid #eee6e4;
+
+            box-shadow:
+                0 5px 15px rgba(0,0,0,0.05);
+
+            transition: 0.25s;
+        }
+
+        .example-btn:hover {
+            transform: translateY(-2px);
+            color: #ff721f;
+            border-color: #ffbd93;
+        }
+
+        textarea {
+            width: 100%;
+            height: 315px;
+            resize: vertical;
+            border-radius: 14px;
+            border: 1px solid #dcdde5;
+            outline: none;
+            padding: 18px;
+
+            background:
+                rgba(255,255,255,0.7);
+
+            color: #37415d;
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.65;
+            transition: 0.25s;
+        }
+
+        textarea:focus {
+            background: white;
+            border-color: #ff8b58;
+
+            box-shadow:
+                0 0 0 4px rgba(255,139,88,0.1);
+        }
+
+        textarea::placeholder {
+            color: #8290ae;
+        }
+
+        .input-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 13px;
+        }
+
+        .counter {
+            color: #7b87a5;
+            font-size: 14px;
+        }
+
+        .clear-btn {
+            border: none;
+            background: transparent;
+            color: #36405a;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .clear-btn:hover {
+            color: #ff426d;
+        }
+
+        .summarize-btn {
+            width: 100%;
+            margin-top: 20px;
+            border: none;
+            padding: 16px;
+            border-radius: 13px;
+            color: white;
+            font-size: 17px;
+            font-weight: 750;
+            cursor: pointer;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #ff9c3c,
+                    #ff4b7b,
+                    #e82db5
+                );
+
+            background-size: 200% auto;
+
+            box-shadow:
+                0 10px 28px rgba(255,70,110,0.28);
+
+            transition: 0.25s;
+
+            animation:
+                buttonGradient 5s ease-in-out infinite;
+        }
+
+        @keyframes buttonGradient {
+            0%, 100% {
+                background-position: 0% center;
+            }
+
+            50% {
+                background-position: 100% center;
+            }
+        }
+
+        .summarize-btn:hover {
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 14px 35px rgba(255,70,110,0.35);
+        }
+
+        .summarize-btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .ai-icon {
+            background:
+                linear-gradient(
+                    135deg,
+                    #ffffff,
+                    #f8edff
+                );
+
+            color: #7650ff;
+
+            box-shadow:
+                0 8px 22px rgba(130,70,255,0.12);
+        }
+
+        .ready {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 15px;
+            border-radius: 30px;
+            background: rgba(255,255,255,0.65);
+            border: 1px solid #e7e6ef;
+            color: #566078;
+            font-size: 13px;
+        }
+
+        .ready-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #4bd99a;
+
+            box-shadow:
+                0 0 0 5px rgba(75,217,154,0.1);
+        }
+
+        .result-area {
+            position: relative;
+            min-height: 350px;
+            border-radius: 17px;
+            overflow: hidden;
+
+            background:
+                radial-gradient(
+                    circle at center,
+                    rgba(220,190,255,0.2),
+                    rgba(255,255,255,0.35) 50%,
+                    rgba(255,245,240,0.4)
+                );
+
+            border:
+                1px solid rgba(236,226,235,0.8);
+        }
+
+        .placeholder {
+            height: 100%;
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 25px;
+        }
+
+        .placeholder-star {
+            font-size: 65px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ff4f88,
+                    #754cff,
+                    #00a7ff
+                );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+
+            animation:
+                aiStar 4s ease-in-out infinite;
+        }
+
+        @keyframes aiStar {
+            0%, 100% {
+                transform:
+                    scale(1)
+                    rotate(0deg);
+
+                filter:
+                    drop-shadow(
+                        0 0 8px
+                        rgba(120,80,255,0.15)
+                    );
+            }
+
+            50% {
+                transform:
+                    scale(1.12)
+                    rotate(8deg);
+
+                filter:
+                    drop-shadow(
+                        0 0 22px
+                        rgba(120,80,255,0.35)
+                    );
+            }
+        }
+
+        .placeholder-title {
+            margin-top: 18px;
+            font-size: 21px;
+            font-weight: 750;
+            color: #273251;
+        }
+
+        .placeholder-text {
+            margin-top: 8px;
+            max-width: 360px;
+            color: #72809f;
+            line-height: 1.6;
+        }
+
+        .ai-processing {
+            display: none;
+            position: absolute;
+            inset: 0;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .ai-orbit {
+            position: relative;
+            width: 190px;
+            height: 190px;
+            display: grid;
+            place-items: center;
+        }
+
+        .ai-core {
+            font-size: 70px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ff4d8d,
+                    #704cff,
+                    #00a7ff
+                );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+
+            filter:
+                drop-shadow(
+                    0 0 20px
+                    rgba(100,80,255,0.35)
+                );
+
+            animation:
+                corePulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes corePulse {
+            0%, 100% {
+                transform:
+                    scale(0.9)
+                    rotate(0deg);
+            }
+
+            50% {
+                transform:
+                    scale(1.15)
+                    rotate(10deg);
+            }
+        }
+
+        .orbit {
+            position: absolute;
+            inset: 5px;
+
+            border:
+                1px solid
+                rgba(130,90,255,0.35);
+
+            border-radius: 50%;
+
+            animation:
+                orbitRotate 3s linear infinite;
+        }
+
+        .orbit.two {
+            inset: 25px;
+            border-color:
+                rgba(255,100,160,0.25);
+
+            animation-duration: 4s;
+            animation-direction: reverse;
+        }
+
+        .orbit::before {
+            content: "✦";
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            color: #9b6cff;
+            font-size: 15px;
+        }
+
+        .orbit.two::before {
+            top: auto;
+            bottom: -8px;
+            color: #ff7197;
+        }
+
+        @keyframes orbitRotate {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .processing-title {
+            margin-top: 15px;
+            font-size: 20px;
+            font-weight: 750;
+            color: #293452;
+        }
+
+        .processing-text {
+            margin-top: 7px;
+            color: #74809c;
+            font-size: 14px;
+        }
+
+        .summary-content {
+            display: none;
+            height: 350px;
+            padding: 22px;
+            overflow-y: auto;
+
+            background:
+                rgba(255,255,255,0.55);
+
+            color: #303a56;
+            font-size: 16px;
+            line-height: 1.75;
+            white-space: pre-wrap;
+
+            animation:
+                summaryAppear 0.45s ease;
+        }
+
+        @keyframes summaryAppear {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-actions {
+            display: none;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .result-btn {
+            flex: 1;
+            border: 1px solid #e4dfe4;
+            background: white;
+            color: #59627b;
+            padding: 11px;
+            border-radius: 11px;
+            font-weight: 650;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .result-btn:hover {
+            color: #7650ff;
+            border-color: #bca9ff;
+            transform: translateY(-1px);
+        }
+
+        .status {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 13px;
+            border-radius: 9px;
+            font-size: 13px;
+            background: #fff0f2;
+            border: 1px solid #ffcbd3;
+            color: #c23d55;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns:
+                repeat(3, 1fr);
+            gap: 30px;
+            margin: 42px 30px 25px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+
+            background:
+                rgba(255,255,255,0.8);
+
+            border:
+                1px solid rgba(255,255,255,0.95);
+
+            font-size: 22px;
+
+            box-shadow:
+                0 7px 20px rgba(70,40,80,0.08);
+        }
+
+        .feature-title {
+            font-size: 14px;
+            font-weight: 750;
+            color: #273351;
+        }
+
+        .feature-text {
+            margin-top: 3px;
+            font-size: 12px;
+            color: #75819d;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 45px;
+            padding: 25px 0;
+
+            border-top:
+                1px solid
+                rgba(150,120,160,0.12);
+
+            color: #7b849c;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .footer strong {
+            color: #ff5c75;
+        }
+
+        @media (max-width: 900px) {
+            .top-left,
+            .top-right {
+                display: none;
+            }
+
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                margin-top: 40px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .app {
+                width: 94%;
+                margin: 25px auto;
+            }
+
+            h1 {
+                font-size: 40px;
+                letter-spacing: -1.5px;
+            }
+
+            .subtitle {
+                font-size: 15px;
+            }
+
+            .card {
+                padding: 17px;
+            }
+
+            .card-header {
+                align-items: flex-start;
+            }
+
+            .card-title {
+                font-size: 18px;
+            }
+
+            .example-btn {
+                padding: 8px 10px;
+            }
+
+            textarea {
+                height: 260px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="background">
+        <div class="blob one"></div>
+        <div class="blob two"></div>
+        <div class="blob three"></div>
+
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+
+        <span class="sparkle">✦</span>
+        <span class="sparkle">✦</span>
+        <span class="sparkle">✦</span>
+        <span class="sparkle">✦</span>
+    </div>
+
+    <div class="top-left">
+        <span class="book-icon">▱</span>
+
+        <span>
+            From long text<br>
+            to clear insights
+        </span>
+    </div>
+
+    <div class="top-right">
+        <span class="top-star">✦</span>
+
+        <span>
+            Summarize Smarter<br>
+            Read Better
+        </span>
+    </div>
+
+    <main class="app">
+
+        <header class="header">
+            <h1>
+                Text Summarizer
+            </h1>
+
+            <p class="subtitle">
+                Turn long conversations and documents into clear, concise summaries.
+            </p>
+        </header>
+
+        <section class="workspace">
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    <div class="card-title">
+
+                        <div class="icon">
+                            ✎
+                        </div>
+
+                        Your Content
+
+                    </div>
+
+                    <button
+                        class="example-btn"
+                        id="example-btn"
+                        type="button"
+                    >
+                        💡 Try an example
+                    </button>
+
+                </div>
+
+                <textarea
+                    id="dialogue-input"
+                    placeholder="Paste your meeting notes, conversation, article, or any long text here..."
+                ></textarea>
+
+                <div class="input-footer">
+
+                    <span
+                        class="counter"
+                        id="counter"
+                    >
+                        0 characters · 0 words
+                    </span>
+
+                    <button
+                        class="clear-btn"
+                        id="clear-btn"
+                        type="button"
+                    >
+                        🗑 Clear
+                    </button>
+
+                </div>
+
+                <button
+                    class="summarize-btn"
+                    id="summarize-btn"
+                    type="button"
+                >
+                    ✦ Generate Summary
+                </button>
+
+                <div
+                    class="status"
+                    id="status"
+                ></div>
+
+            </div>
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    <div class="card-title">
+
+                        <div class="icon ai-icon">
+                            ✦
+                        </div>
+
+                        AI Summary
+
+                    </div>
+
+                    <div class="ready">
+
+                        <span class="ready-dot"></span>
+
+                        <span id="ready-text">
+                            Ready to summarize
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <div class="result-area">
+
+                    <div
+                        class="placeholder"
+                        id="placeholder"
+                    >
+
+                        <div class="placeholder-star">
+                            ✦
+                        </div>
+
+                        <div class="placeholder-title">
+                            Your summary will appear here
+                        </div>
+
+                        <div class="placeholder-text">
+                            Add some content on the left and let the model turn it into a concise summary.
+                        </div>
+
+                    </div>
+
+                    <div
+                        class="ai-processing"
+                        id="ai-processing"
+                    >
+
+                        <div class="ai-orbit">
+
+                            <div class="orbit"></div>
+
+                            <div class="orbit two"></div>
+
+                            <div class="ai-core">
+                                ✦
+                            </div>
+
+                        </div>
+
+                        <div class="processing-title">
+                            Summarizing your content...
+                        </div>
+
+                        <div class="processing-text">
+                            Analyzing, processing and generating key insights
+                        </div>
+
+                    </div>
+
+                    <div
+                        class="summary-content"
+                        id="summary-content"
+                    ></div>
+
+                </div>
+
+                <div
+                    class="result-actions"
+                    id="result-actions"
+                >
+
+                    <button
+                        class="result-btn"
+                        id="copy-btn"
+                        type="button"
+                    >
+                        📋 Copy
+                    </button>
+
+                    <button
+                        class="result-btn"
+                        id="download-btn"
+                        type="button"
+                    >
+                        ↓ Download
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="features">
+
+            <div class="feature">
+
+                <div class="feature-icon">
+                    ⚡
+                </div>
+
+                <div>
+
+                    <div class="feature-title">
+                        Fast & Accurate
+                    </div>
+
+                    <div class="feature-text">
+                        Get concise summaries in seconds
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="feature">
+
+                <div class="feature-icon">
+                    🛡
+                </div>
+
+                <div>
+
+                    <div class="feature-title">
+                        Your Data Stays Private
+                    </div>
+
+                    <div class="feature-text">
+                        No content is stored
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="feature">
+
+                <div class="feature-icon">
+                    ◈
+                </div>
+
+                <div>
+
+                    <div class="feature-title">
+                        Built with FastAPI
+                    </div>
+
+                    <div class="feature-text">
+                        Powered by Hugging Face Transformers
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <footer class="footer">
+
+            © 2026 Text Summarizer. All rights reserved.<br>
+
+            Built with <strong>♥</strong> using FastAPI
+
+        </footer>
+
+    </main>
+
+    <script>
+
+        const input =
+            document.getElementById(
+                "dialogue-input"
+            );
+
+        const counter =
+            document.getElementById(
+                "counter"
+            );
+
+        const summarizeButton =
+            document.getElementById(
+                "summarize-btn"
+            );
+
+        const clearButton =
+            document.getElementById(
+                "clear-btn"
+            );
+
+        const exampleButton =
+            document.getElementById(
+                "example-btn"
+            );
+
+        const placeholder =
+            document.getElementById(
+                "placeholder"
+            );
+
+        const processing =
+            document.getElementById(
+                "ai-processing"
+            );
+
+        const summaryContent =
+            document.getElementById(
+                "summary-content"
+            );
+
+        const resultActions =
+            document.getElementById(
+                "result-actions"
+            );
+
+        const copyButton =
+            document.getElementById(
+                "copy-btn"
+            );
+
+        const downloadButton =
+            document.getElementById(
+                "download-btn"
+            );
+
+        const status =
+            document.getElementById(
+                "status"
+            );
+
+        const readyText =
+            document.getElementById(
+                "ready-text"
+            );
+
+        function updateCounter() {
+
+            const text =
+                input.value.trim();
+
+            const characters =
+                input.value.length;
+
+            const words =
+                text
+                    ? text.split(/\s+/).length
+                    : 0;
+
+            counter.innerText =
+                `${characters} characters · ${words} words`;
+        }
+
+        input.addEventListener(
+            "input",
+            updateCounter
+        );
+
+        exampleButton.addEventListener(
+            "click",
+            () => {
+
+                input.value =
+                `The development team discussed the progress of the mobile application during today's meeting. The login and registration features have been completed successfully. However, the team is currently fixing several payment-related bugs that were discovered during testing. Once these issues are resolved, the application will go through final testing. The team expects to complete the remaining work by the end of the week.`;
+
+                updateCounter();
+
+                status.style.display =
+                    "none";
+            }
+        );
+
+        clearButton.addEventListener(
+            "click",
+            () => {
+
+                input.value = "";
+
+                updateCounter();
+
+                placeholder.style.display =
+                    "flex";
+
+                processing.style.display =
+                    "none";
+
+                summaryContent.style.display =
+                    "none";
+
+                resultActions.style.display =
+                    "none";
+
+                readyText.innerText =
+                    "Ready to summarize";
+
+                status.style.display =
+                    "none";
+            }
+        );
+
+        summarizeButton.addEventListener(
+            "click",
+            async () => {
+
+                const dialogue =
+                    input.value.trim();
+
+                if (!dialogue) {
+
+                    status.innerText =
+                        "Please enter some content first.";
+
+                    status.style.display =
+                        "block";
+
+                    return;
+                }
+
+                placeholder.style.display =
+                    "none";
+
+                summaryContent.style.display =
+                    "none";
+
+                resultActions.style.display =
+                    "none";
+
+                processing.style.display =
+                    "flex";
+
+                readyText.innerText =
+                    "Processing...";
+
+                summarizeButton.disabled =
+                    true;
+
+                summarizeButton.innerText =
+                    "⏳ Summarizing...";
+
+                status.style.display =
+                    "none";
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/summarize/",
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                body: JSON.stringify({
+                                    dialogue: dialogue
+                                })
+                            }
+                        );
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            `Server error: ${response.status}`
+                        );
+                    }
+
+                    const data =
+                        await response.json();
+
+                    const summary =
+                        data.summary;
+
+                    if (!summary) {
+
+                        throw new Error(
+                            "No summary was returned by the model."
+                        );
+                    }
+
+                    processing.style.display =
+                        "none";
+
+                    summaryContent.innerText =
+                        summary;
+
+                    summaryContent.style.display =
+                        "block";
+
+                    resultActions.style.display =
+                        "flex";
+
+                    readyText.innerText =
+                        "Summary ready";
+
+                }
+
+                catch (error) {
+
+                    processing.style.display =
+                        "none";
+
+                    placeholder.style.display =
+                        "flex";
+
+                    readyText.innerText =
+                        "Ready to summarize";
+
+                    status.innerText =
+                        `Something went wrong: ${error.message}`;
+
+                    status.style.display =
+                        "block";
+
+                }
+
+                finally {
+
+                    summarizeButton.disabled =
+                        false;
+
+                    summarizeButton.innerText =
+                        "✦ Generate Summary";
+                }
+
+            }
+        );
+
+        copyButton.addEventListener(
+            "click",
+            async () => {
+
+                const summary =
+                    summaryContent.innerText;
+
+                try {
+
+                    await navigator.clipboard.writeText(
+                        summary
+                    );
+
+                    copyButton.innerText =
+                        "✓ Copied!";
+
+                    setTimeout(
+                        () => {
+
+                            copyButton.innerText =
+                                "📋 Copy";
+
+                        },
+                        1500
+                    );
+
+                }
+
+                catch (error) {
+
+                    alert(
+                        "Unable to copy the summary."
+                    );
+                }
+
+            }
+        );
+
+        downloadButton.addEventListener(
+            "click",
+            () => {
+
+                const summary =
+                    summaryContent.innerText;
+
+                const blob =
+                    new Blob(
+                        [summary],
+                        {
+                            type: "text/plain"
+                        }
+                    );
+
+                const url =
+                    URL.createObjectURL(blob);
+
+                const link =
+                    document.createElement("a");
+
+                link.href = url;
+
+                link.download =
+                    "summary.txt";
+
+                document.body.appendChild(link);
+
+                link.click();
+
+                document.body.removeChild(link);
+
+                URL.revokeObjectURL(url);
+
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>
